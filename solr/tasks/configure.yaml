@@ -1,0 +1,65 @@
+---
+- name: Remove existing SOLR_HEAP configuration.
+  lineinfile:
+    dest: "{{ solr_config_file }}"
+    regexp: "^SOLR_HEAP"
+    state: absent
+
+- name: Apply Solr configuration changes.
+  lineinfile:
+    dest: "{{ solr_config_file }}"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    mode: 0644
+  with_items:
+    - regexp: "^.?SOLR_JAVA_MEM="
+      line: 'SOLR_JAVA_MEM="-Xms{{ solr_xms }} -Xmx{{ solr_xmx }}"'
+    - regexp: "^SOLR_PORT="
+      line: 'SOLR_PORT="{{ solr_port }}"'
+    - regexp: "^.?SOLR_TIMEZONE="
+      line: 'SOLR_TIMEZONE="{{ solr_timezone }}"'
+
+- name: Replace data folder
+  lineinfile: 
+    path: "{{ solr_config_file }}" 
+    regexp: '^.?SOLR_HOME="/Application/solr/data"' 
+    line: 'SOLR_HOME="/Application/solr/server/solr"'
+    backrefs: yes
+
+- name: Replace configedit
+  lineinfile: 
+    path: "{{ solr_config_file }}" 
+    regexp: '^#SOLR_OPTS=".SOLR_OPTS -Dsolr.clustering.enabled=true"$' 
+    line: 'SOLR_OPTS="$SOLR_OPTS -Ddisable.configEdit=true"'
+    backrefs: yes
+
+- name: Copy Config Files
+  copy: src={{ item.src }} dest={{ item.dest }} mode={{ item.mode }}
+  with_items:
+    - { src: '../templates/configs/jars.tar.gz', dest: '{{ solr_install_dir }}', mode: "u=rwx,g=rx,o=rx" }
+    - { src: '../templates/configs/configurations.tar.gz', dest: '{{ solr_install_dir }}', mode: "u=rwx,g=rx,o=rx" }
+
+- name: Extract Solr Configs
+  unarchive:
+    src: "{{ solr_install_dir }}/configurations.tar.gz"
+    dest: "{{ solr_workspace }}"
+    copy: false
+
+- name: Extract Jars
+  unarchive:
+    src: "{{ solr_install_dir }}/jars.tar.gz"
+    dest: "{{ solr_workspace }}"
+    copy: false
+
+- name: Remove lib folder.
+  command: "rm -rf {{ solr_install_dir }}/solr/server/solr-webapp/webapp/WEB-INF/lib"
+  with_items: "{{ solr_cores }}"
+  become: true
+  become_user: "{{ solr_user }}"
+
+- name: Replace lib folder
+  command: mv {{ solr_install_dir }}/lib {{ solr_install_path }}/server/solr-webapp/webapp/WEB-INF/
+
+
+

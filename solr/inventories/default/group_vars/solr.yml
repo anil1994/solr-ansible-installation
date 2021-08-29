@@ -1,0 +1,28 @@
+java_home: ""
+
+solr_group: wasteam
+solr_create_user: true
+solr_user: wasadm
+solr_service_manage: true
+solr_service_name: solr
+solr_service_state: started
+solr_install_dir: /Application
+solr_install_path: "/Application/{{ solr_service_name }}"
+solr_version: "6.6.0"
+solr_mirror: "https://archive.apache.org/dist"
+solr_workspace: /Application
+solr_home: "/Application/{{ solr_service_name }}"
+solr_port: "7979"
+solr_true_log_file_path: \/Application\/{{ solr_service_name }}-{{solr_version}}\/logs
+solr_config_file: /etc/default/{{ solr_service_name }}.in.sh
+solr_cores:
+  - xxx_products
+  - xxx_promotions
+  - xxx_suggestion
+  - xxx_promotion
+solr_xms: "512M"
+solr_xmx: "1024M"
+solr_timezone: "UTC"
+solr_connect_host: localhost
+solr_remove_cruft: false
+solr_restart_handler_enabled: true

@@ -1,0 +1,4 @@
+[solr]
+xxxx  ansible_port=22 ansible_ssh_user=vagrant
+
+[new_nodes]

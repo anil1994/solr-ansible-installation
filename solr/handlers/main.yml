@@ -1,0 +1,17 @@
+---
+# Handlers for Solr
+  - name: stop solr
+    service: name=solr state=stopped
+
+  - name: start solr
+    service: name=solr state=started
+
+  #- name: restart solr
+  #  service: name=solr state=restarted
+
+  - name: restart solr
+    service:
+      name: "{{ solr_service_name }}"
+      state: restarted
+      sleep: 5
+    when: solr_restart_handler_enabled

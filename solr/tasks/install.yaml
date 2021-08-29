@@ -1,0 +1,81 @@
+---
+
+- import_tasks: user.yaml
+  when: solr_create_user
+
+- name: Set solr_filename for Solr 4+.
+  set_fact:
+    solr_filename: "solr-{{ solr_version }}"
+  when: "solr_version.split('.')[0] >= '4'"#
+
+- name: Check if Solr has been installed already.
+  stat:
+    path: "{{ solr_install_path }}"
+  register: solr_install_path_status
+
+- name: Check installation directory is exist
+  stat:
+    path: "{{ solr_install_dir }}"
+  register: installation_dir
+
+- name: Create installation folder
+  file:
+    path: "{{ solr_install_dir }}"
+    state: directory
+  when: not installation_dir.stat.exists
+
+
+- name: Download Solr.
+  get_url:
+    url: "{{ solr_mirror }}/lucene/solr/{{ solr_version }}/{{ solr_filename }}.tgz"
+    dest: "{{ solr_workspace }}/{{ solr_filename }}.tgz"
+    force: false
+  when: solr_install_path_status.stat.isdir is not defined
+  register: solr_download_status
+
+- name: Expand Solr.
+  unarchive:
+    src: "{{ solr_workspace }}/{{ solr_filename }}.tgz"
+    dest: "{{ solr_workspace }}"
+    copy: false
+  when: solr_download_status.changed
+- name: Copy Script Files
+  copy: src={{ item.src }} dest={{ item.dest }} mode={{ item.mode }}
+  with_items:
+    - { src: '../templates/scripts/restart.sh', dest: '{{ solr_install_dir }}', mode: "u=rwx,g=rx,o=rx" }
+    - { src: '../templates/scripts/start.sh', dest: '{{ solr_install_dir }}', mode: "u=rwx,g=rx,o=rx" }
+    - { src: '../templates/scripts/stop.sh', dest: '{{ solr_install_dir }}', mode: "u=rwx,g=rx,o=rx" }
+
+# Install Solr 5+.
+- include_tasks: install_solr.yaml
+  when: "solr_version.split('.')[0] >= '5'"
+
+- name: Ensure solr is started and enabled on boot if configured.
+  service:
+    name: "{{ solr_service_name }}"
+    state: "{{ solr_service_state }}"
+    enabled: true
+  when: solr_service_manage
+
+# Configure solr.
+- include_tasks: configure.yaml
+  when: "solr_version.split('.')[0] >= '5'"
+
+# Create cores, if any are configured.
+- include_tasks: cores.yaml
+  when: "solr_cores and solr_version.split('.')[0] >= '5'"
+
+- name: Change user
+  become_user: root
+  command: chown -R {{ solr_user }}:{{ solr_group }} {{ solr_workspace }}
+  tags: ['skip_ansible_lint']
+
+- name: restart Solr with new confs
+  systemd:
+    name: 'solr'
+    state: restarted
+  become: True
+
+- include_tasks: trim-fat.yaml
+
+

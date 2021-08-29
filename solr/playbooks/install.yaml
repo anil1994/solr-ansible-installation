@@ -1,0 +1,10 @@
+- hosts: solr
+  become: yes
+  become_user: root
+  handlers:
+  - import_tasks: ../handlers/main.yml
+  tasks:
+  - name: Install java
+    include_tasks: ../tasks/install_java.yaml
+  - name: Install solr
+    include_tasks: ../tasks/install.yaml
